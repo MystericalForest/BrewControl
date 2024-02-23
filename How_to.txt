@@ -4,7 +4,7 @@ git clone https://github.com/MystericalForest/BrewControl.git
 Commit:
 git add .
 git commit -m "First commit"
-git push origin master
+git push origin main
 
 Update local folder:
 git pull
