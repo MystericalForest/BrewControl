@@ -1,4 +1,12 @@
 import BrewStep
+from enum import Enum
+
+class Brew_status(Enum):
+    NOT_STARTED = 1
+    STARTED = 2
+    PAUSED = 3
+    STOPPED = 4
+    ERROR = 5
 
 class BrewController:
     def __init__(self):
@@ -6,6 +14,7 @@ class BrewController:
         self.first = None           # Reference to the first node in the linked list
         self.last = None            # Reference to the last node in the linked list
         self.active_brew_step = None     # Reference to the currently active step
+        self.status=Brew_status.NOT_STARTED
         self.generate_brew_control_default_data()  # Generate default brewing steps
 
     def add_brew_step(self, name):
@@ -42,6 +51,20 @@ class BrewController:
         if self.active_brew_step is not None:
             self.active_brew_step = self.active_brew_step.next_node
 
+    def start_brew(self):
+        self.status=Brew_status.STARTED
+
+    def get_status(self):
+        if (self.status==Brew_status.NOT_STARTED):
+            return "Not started"
+        if (self.status==Brew_status.STARTED):
+            return "Started"
+        if (self.status==Brew_status.PAUSED):
+            return "Paused"
+        if (self.status==Brew_status.STOPPED):
+            return "Stopped"
+        return "Error"
+        
     def get_active_brew_step_name(self):
         # Returns the name of the currently active brew step
         if self.active_brew_step:
