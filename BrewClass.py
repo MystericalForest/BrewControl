@@ -21,6 +21,22 @@ class BrewClass:
     def start_brew(self):
         self.brew_controller.start_brew()
 
+    def stop_brew(self):
+        self.brew_controller.stop_brew()
+
+    def pause_brew(self):
+        self.brew_controller.pause_brew()
+
+    def reset_brew(self):
+        self.brew_controller.reset_brew()
+
+    def restart_brew(self):
+        self.brew_controller.reset_brew()
+        self.brew_controller.start_brew()
+
+    def next_brew_step(self):
+        self.brew_controller.next_brew_step()
+        
     def get_status(self):
         return self.brew_controller.get_status()
 

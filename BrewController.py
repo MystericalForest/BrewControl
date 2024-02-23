@@ -43,16 +43,42 @@ class BrewController:
         # Prints the names of all brew steps in the linked list
         current_node = self.first
         while current_node:
-            print("Brew Step:", current_node.name)
+            print("Brew Step:", str(current_node)) #.name)
             current_node = current_node.next_node
 
     def next_brew_step(self):
         # Moves the active step to the next step in the linked list
         if self.active_brew_step is not None:
+            if self.status==Brew_status.STARTED:
+                self.active_brew_step.stop_brew_step()
+                if self.active_brew_step.next_node is not None:
+                    self.active_brew_step.next_node.start_brew_step()
+                else:
+                    self.status=Brew_status.STOPPED
             self.active_brew_step = self.active_brew_step.next_node
 
     def start_brew(self):
-        self.status=Brew_status.STARTED
+        if (self.status==Brew_status.NOT_STARTED
+            or self.status==Brew_status.PAUSED
+            or self.status==Brew_status.STOPPED):
+            self.status=Brew_status.STARTED
+            self.active_brew_step.start_brew_step()
+
+    def stop_brew(self):
+        if (self.status==Brew_status.STARTED
+            or self.status==Brew_status.PAUSED):
+            self.status=Brew_status.STOPPED
+            self.active_brew_step.stop_brew_step()
+
+    def pause_brew(self):
+        if self.status==Brew_status.STARTED:
+            self.status=Brew_status.PAUSED
+            self.active_brew_step.pause_brew_step()
+
+    def reset_brew(self):
+        self.status=Brew_status.NOT_STARTED
+        self.active_brew_step.reset_brew_step()
+        self.active_brew_step=self.first
 
     def get_status(self):
         if (self.status==Brew_status.NOT_STARTED):
