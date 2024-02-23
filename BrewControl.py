@@ -1,47 +1,81 @@
-class Node:
-    def __init__(self, data=None):
-        self.data = data
-        self.next_node = None
+class BrewStep:
+    def __init__(self, name=None):
+        # Initializer for BrewStep class
+        self.name = name
+        self.previous_node = None  # Reference to the previous node in the linked list
+        self.next_node = None      # Reference to the next node in the linked list
 
-class Master:
+class BrewController:
     def __init__(self):
-        self.head = None
-        self.active_subclass = None
+        # Initializer for BrewController class
+        self.first = None           # Reference to the first node in the linked list
+        self.last = None            # Reference to the last node in the linked list
+        self.active_step = None     # Reference to the currently active step
+        self.generate_brew_control_data()  # Generate default brewing steps
 
-    def add_subclass(self, data):
-        new_node = Node(data)
-        new_node.next_node = self.head
-        self.head = new_node
-        self.active_subclass = new_node
+    def add_brew_step(self, name):
+        # Adds a new BrewStep to the linked list
+        new_node = BrewStep(name)
+        if (self.first is None):
+            # If the list is empty, set the new node as the first node
+            self.first = new_node
+        new_node.previous_node = self.last
+        if (self.last is not None):
+            # If there is a last node, set its next_node to the new node
+            self.last.next_node = new_node
+        self.last = new_node         # Update last to the new node
+        self.active_step = new_node  # Set the active step to the new node
 
-    def switch_active_subclass(self, data):
-        current_node = self.head
+    def switch_active_brew_step(self, name):
+        # Finds and sets the active step to the one with the given name
+        current_node = self.first
         while current_node:
-            if current_node.data == data:
-                self.active_subclass = current_node
+            if current_node.name == name:
+                self.active_step = current_node
                 return
             current_node = current_node.next_node
 
-    def display_active_subclass(self):
-        if self.active_subclass:
-            print("Aktiv underklasse:", self.active_subclass.data)
+    def display_all_brew_step(self):
+        # Prints the names of all brew steps in the linked list
+        current_node = self.first
+        while current_node:
+            print("Brew Step:", current_node.name)
+            current_node = current_node.next_node
+
+    def next_brew_step(self):
+        # Moves the active step to the next step in the linked list
+        if self.active_step is not None:
+            self.active_step = self.active_step.next_node
+
+    def get_active_brew_step_name(self):
+        # Returns the name of the currently active brew step
+        if self.active_step:
+            return self.active_step.name
         else:
-            print("Ingen aktiv underklasse.")
+            return "No active brew steps."
+
+    def generate_brew_control_data(self):
+        # Initializes the linked list with default brewing steps and sets the active step to the first step
+        self.add_brew_step("Step 1")
+        self.add_brew_step("Step 2")
+        self.add_brew_step("Step 3")
+        self.add_brew_step("Step 4")
+        self.active_step = self.first
 
 # Eksempel på brug:
 if __name__ == "__main__":
-    master_instance = Master()
-
-    # Tilføj underklasser
-    master_instance.add_subclass("Underklasse 1")
-    master_instance.add_subclass("Underklasse 2")
-    master_instance.add_subclass("Underklasse 3")
+    BrewController_instance = BrewController()
 
     # Vis aktiv underklasse
-    master_instance.display_active_subclass()
+    print(BrewController_instance.get_active_brew_step_name())
 
     # Skift aktiv underklasse
-    master_instance.switch_active_subclass("Underklasse 2")
+    BrewController_instance.next_brew_step()
+    BrewController_instance.next_brew_step()
 
     # Vis igen aktiv underklasse
-    master_instance.display_active_subclass()
+    print(BrewController_instance.get_active_brew_step_name())
+
+    # Vis alle underklasser
+    print()
+    BrewController_instance.display_all_brew_step()
