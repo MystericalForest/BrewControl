@@ -54,8 +54,15 @@ class MyApp:
         # Opdaterer baggrundsfarven for resten af Tkinter-vinduet
         self.root.tk_setPalette(background="#2E2E2E", foreground="white")
 
+def on_closing():
+    root.quit()
+    root.destroy()
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = MyApp(root)
     root.geometry("800x600")
+
+    # Bind on_closing-funktionen til vinduets lukningsbegivenhed
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
