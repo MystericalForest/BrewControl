@@ -44,6 +44,27 @@ class BrewClass:
     def get_status(self):
         return self.brew_controller.get_status()
 
+    def get_set_point_data(self):
+        return self.brew_controller.get_set_point_data()
+
+    def get_logger_data(self):
+        return self.brew_controller.get_logger_data()
+
+    def get_tast_times(self):
+        return self.brew_controller.get_tast_times()
+
+    def get_x_axis_min(self):
+        return self.brew_controller.get_x_axis_min()
+
+    def get_x_axis_max(self):
+        return self.brew_controller.get_x_axis_max()
+
+    def update_data(self):
+        return self.brew_controller.update_data()
+
+    def get_current_timestamp(self):
+        return self.brew_controller.get_current_timestamp()
+
 # Eksempel på brug:
 if __name__ == "__main__":
     BrewClass_instance = BrewClass("Bryg 1")

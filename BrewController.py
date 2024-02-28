@@ -1,4 +1,6 @@
 import BrewStep
+import DataLogger_Sim
+import Setpoint
 from enum import Enum
 
 class Brew_status(Enum):
@@ -15,6 +17,11 @@ class BrewController:
         self.last = None            # Reference to the last node in the linked list
         self.active_brew_step = None     # Reference to the currently active step
         self.status=Brew_status.NOT_STARTED
+        self.datalogger=DataLogger_Sim.DataLogger_Sim()
+        self.setpoints=[]
+        self.setpoints.append(Setpoint.Setpoint(0,65))
+        self.setpoints.append(Setpoint.Setpoint(15,85))
+        self.setpoints.append(Setpoint.Setpoint(35,85))
         self.generate_brew_control_default_data()  # Generate default brewing steps
 
     def add_brew_step(self, name):
@@ -97,6 +104,44 @@ class BrewController:
             return self.active_brew_step.name
         else:
             return "No active brew steps."
+
+    def get_set_point_data(self):
+        x=[]
+        y=[]
+        for idx, SP in enumerate(self.setpoints):
+            if (idx>0) and (idx<len(self.setpoints)-1):
+                x.append(SP.time_point)
+                y.append(y[-1])
+            x.append(SP.time_point)
+            y.append(SP.temperature)
+        return x, y
+
+    def get_logger_data(self):
+        return self.datalogger.x_values,self.datalogger.y_values
+
+    def get_tast_times(self):
+        return [4,10,25,28]
+
+    def get_x_axis_min(self):
+        return 0
+
+    def get_current_timestamp(self):
+        return self.datalogger.get_logger_timestamp()
+
+    def get_x_axis_max(self):
+        sp_x, _ = self.get_set_point_data()
+        logger_x=self.datalogger.get_logger_timestamp()
+        return max(max(sp_x), logger_x)
+
+    def get_set_point(self, timestamp):
+        for idx, SP in enumerate(self.setpoints):
+            if SP.time_point>timestamp:
+                return self.setpoints[idx-1].temperature
+
+    def update_data(self):
+        timestamp=self.get_current_timestamp()
+        SP=self.get_set_point(timestamp)
+        return self.datalogger.update_data(SP)
 
     def __len__(self):
         # Returns the number of steps in the Brew Controller
