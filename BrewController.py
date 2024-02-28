@@ -137,6 +137,7 @@ class BrewController:
         for idx, SP in enumerate(self.setpoints):
             if SP.time_point>timestamp:
                 return self.setpoints[idx-1].temperature
+        return self.setpoints[-1].temperature
 
     def update_data(self):
         timestamp=self.get_current_timestamp()
