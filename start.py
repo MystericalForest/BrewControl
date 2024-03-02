@@ -5,29 +5,51 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import BrewClass
+import settings  # Importer Settings-klassen fra settings.py
+
+class SettingsForm(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title(settings.SETTINGS_FORM_TITLE)
+        self.parent = parent
+        self.configure(bg=settings.BACKGROUND_COLOR)  # Baggrundsfarve for mørkt tema
+        
+        label = tk.Label(self, text="Dette er en modalform!")
+        label.pack(padx=20, pady=20)
+        
+        self.grab_set()  # Gør modalvinduet aktivt og inaktiverer hovedvinduet
+        self.focus_set()  # Sæt fokus på modalvinduet
+        
+        # Knappen til at lukke modalvinduet
+        close_button = tk.Button(self, text=settings.CLOSE_BUTTON_TEXT, command=self.close_modal_form)
+        close_button.pack(pady=10)
+
+    def close_modal_form(self):
+        self.destroy()
+        self.parent.focus_set()  # Giver fokus tilbage til hovedvinduet
 
 class Brew_GUI:
     def __init__(self, root):
         self.BrewClass_instance=BrewClass.BrewClass()
         self.is_brewing=False
         self.root = root
-        self.root.title("Brew Control")
-        self.root.configure(bg="#2E2E2E")  # Baggrundsfarve for mørkt tema
+        self.root.title(settings.MAIN_WINDOW_TITLE)
+        self.root.configure(bg=settings.BACKGROUND_COLOR)  # Baggrundsfarve for mørkt tema
 
         # Opretter et Matplotlib-plot
         self.fig, self.ax = plt.subplots(figsize=(5, 3))
-        self.ax.set_xlabel('Tid', color='white')
-        self.ax.set_ylabel('Temperatur', color='white')
+        self.ax.set_xlabel(settings.X_AXIS_LABEL_TEXT, color='white')
+        self.ax.set_ylabel(settings.Y_AXIS_LABEL_TEXT , color='white')
         self.ax.tick_params(axis='x', colors='white')
         self.ax.tick_params(axis='y', colors='white')
-        self.ax.set_facecolor('#2E2E2E')  # Baggrundsfarve for mørkt tema
+        self.ax.set_facecolor(settings.BACKGROUND_COLOR)  # Baggrundsfarve for mørkt tema
 
-        self.fig.patch.set_facecolor('#2E2E2E')  # Baggrundsfarve for mørkt tema
+        self.fig.patch.set_facecolor(settings.BACKGROUND_COLOR)  # Baggrundsfarve for mørkt tema
         
         # Indsætter Matplotlib-plot i Tkinter-vinduet
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
         self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.configure(bg="#2E2E2E")  # Baggrundsfarve for mørkt tema
+        self.canvas_widget.configure(bg=settings.BACKGROUND_COLOR)  # Baggrundsfarve for mørkt tema
 
         # Placerer Matplotlib-plot i bunden af vinduet og lader det fylde bredden
         self.canvas_widget.grid(row=3, column=0, rowspan=2, columnspan=2, sticky="nsew")
@@ -51,14 +73,14 @@ class Brew_GUI:
         label3.grid(row=2, column=0, pady=(10, 0))
 
         # Knapper
-        self.button_start_brew = ttk.Button(self.root, text="Start Brygning", command=self.button_start_brew_callback)
+        self.button_start_brew = ttk.Button(self.root, text=settings.START_BREW_BUTTON_TEXT_START, command=self.button_start_brew_callback)
         button_2 = ttk.Button(self.root, text="Knap 2")
-        button_3 = ttk.Button(self.root, text="Knap 3")
+        button_settings = ttk.Button(self.root, text=settings.SETTINGS_BUTTON_TEXT, command=self.button_settings_callback)
 
         # Placerer Knapperne
         self.button_start_brew.grid(row=0, column=1, pady=(10, 0), sticky="w")
         button_2.grid(row=1, column=1, pady=(10, 0), sticky="w")
-        button_3.grid(row=2, column=1, pady=(10, 0), sticky="w")
+        button_settings.grid(row=2, column=1, pady=(10, 0), sticky="w")
 
         # Opdaterer baggrundsfarven for resten af Tkinter-vinduet
         self.root.tk_setPalette(background="#2E2E2E", foreground="white")
@@ -96,11 +118,14 @@ class Brew_GUI:
 
     def button_start_brew_callback(self):
         if self.is_brewing:
-            self.button_start_brew.configure(text="Start Brygning")
+            self.button_start_brew.configure(text=settings.START_BREW_BUTTON_TEXT_START)
             self.stop_automatic_update()
         else:
-            self.button_start_brew.configure(text="Pause Brygning")
+            self.button_start_brew.configure(text=settings.START_BREW_BUTTON_TEXT_PAUSE)
             self.start_automatic_update()
+
+    def button_settings_callback(self):
+        settings_window = SettingsForm(self.root)
 
     def start_automatic_update(self):
         self.is_brewing=True
