@@ -73,9 +73,5 @@ class BrewClass:
     def get_current_timestamp(self):
         return self.brew_controller.get_current_timestamp()
 
-# Eksempel på brug:
 if __name__ == "__main__":
-    BrewClass_instance = BrewClass("Bryg 1")
-    print(BrewClass_instance)
-    BrewClass_instance.start_brew()
-    print(BrewClass_instance)
+    pass

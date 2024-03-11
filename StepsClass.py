@@ -83,3 +83,9 @@ class StepsClass:
                         return y
                         break
         return
+
+    def get_task_times(self):
+        rtn=[]
+        for x in self.steps:
+            rtn=rtn+x.get_task_times()
+        return rtn

@@ -122,7 +122,7 @@ class BrewController:
         return self.datalogger.x_values,self.datalogger.y_values
 
     def get_tast_times(self):
-        return [4,10,25,28]
+        return self.steps.get_task_times() #[4,10,25,28]
 
     def get_x_axis_min(self):
         return 0

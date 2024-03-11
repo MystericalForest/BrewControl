@@ -43,3 +43,10 @@ class StepClass:
                 return x
                 break
         return
+
+    def get_task_times(self):
+        rtn=[]
+        for x in self.tasks:
+            rtn.append(x.get_times())
+        return rtn
+        

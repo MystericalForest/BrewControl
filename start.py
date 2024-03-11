@@ -85,7 +85,7 @@ class Brew_GUI:
         temp_x, temp_y = self.BrewClass_instance.get_logger_data()
         self.ax.plot(temp_x, temp_y, marker='o', linestyle='-', color='darksalmon', label=settings.Y_AXIS_LABEL_TEXT)
         for task in self.BrewClass_instance.get_tast_times():
-            self.ax.plot([task, task], [0,90], marker='', linestyle=':', color='darksalmon', label='Task')
+            self.ax.plot([task["time"], task["time"]], [0,90], marker='', linestyle=':', color='darksalmon', label=task["name"])
 
         # Juster aksen for at inkludere de nye data
         self.ax.set_xlim(self.BrewClass_instance.get_x_axis_min(), self.BrewClass_instance.get_x_axis_max())

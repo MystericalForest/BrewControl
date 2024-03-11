@@ -7,3 +7,6 @@ class TaskClass:
         self.time=int(time)
         self.index=None
         self.index_name=None
+
+    def get_times(self):
+        return {"name": self.name, "time":self.time}
