@@ -1,6 +1,7 @@
 import BrewController
 from datetime import date
 from enum import Enum
+import StepsClass
 
 class Brew_status(Enum):
     NOT_STARTED = 1
@@ -10,9 +11,10 @@ class Brew_status(Enum):
     ERROR = 5
     
 class BrewClass:
-    def __init__(self, name=None):
+    def __init__(self, steps=None, name=None):
         # Initializer for BrewStep class
         self.name = name
+        self.steps = steps
         self.brewdate=None
         self.status=Brew_status.NOT_STARTED
         self.brew_controller = BrewController.BrewController()

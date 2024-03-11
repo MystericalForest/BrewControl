@@ -5,32 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import BrewClass
+import StepsClass
+import SettingsForm
 import settings  # Importer Settings-klassen fra settings.py
 
-class SettingsForm(tk.Toplevel):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.title(settings.SETTINGS_FORM_TITLE)
-        self.parent = parent
-        self.configure(bg=settings.BACKGROUND_COLOR)  # Baggrundsfarve for mørkt tema
-        
-        label = tk.Label(self, text="Dette er en modalform!")
-        label.pack(padx=20, pady=20)
-        
-        self.grab_set()  # Gør modalvinduet aktivt og inaktiverer hovedvinduet
-        self.focus_set()  # Sæt fokus på modalvinduet
-        
-        # Knappen til at lukke modalvinduet
-        close_button = tk.Button(self, text=settings.CLOSE_BUTTON_TEXT, command=self.close_modal_form)
-        close_button.pack(pady=10)
-
-    def close_modal_form(self):
-        self.destroy()
-        self.parent.focus_set()  # Giver fokus tilbage til hovedvinduet
-
 class Brew_GUI:
-    def __init__(self, root):
-        self.BrewClass_instance=BrewClass.BrewClass()
+    def __init__(self, root, steps):
+        self.BrewClass_instance=BrewClass.BrewClass(steps)
         self.is_brewing=False
         self.root = root
         self.root.title(settings.MAIN_WINDOW_TITLE)
@@ -125,7 +106,8 @@ class Brew_GUI:
             self.start_automatic_update()
 
     def button_settings_callback(self):
-        settings_window = SettingsForm(self.root)
+        settings_window = SettingsForm.SettingsForm(self.root, self.BrewClass_instance.steps)
+        #settings_window.wait_window(settings_window)
 
     def start_automatic_update(self):
         self.is_brewing=True
@@ -139,8 +121,15 @@ class Brew_GUI:
         self.root.destroy()
 
 if __name__ == "__main__":
+    steps=StepsClass.StepsClass()
+    steps.add_new_step("Mæskning", 60, 65)
+    steps.add_new_task(0, '- Tilsæt bitterhumle', 15)
+    steps.add_new_task(0, '- Tilsæt smagshumle', 30)
+    steps.add_new_step("Udmæskning", 75, 85)
+    steps.add_new_step("Kogning", 135, 100)
+    steps.add_new_task(2, '- Tilsæt honning', 25)
     root = tk.Tk()
-    app = Brew_GUI(root)
+    app = Brew_GUI(root, steps)
     root.geometry("800x600")
 
     # Bind on_closing-funktionen til vinduets lukningsbegivenhed
