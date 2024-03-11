@@ -19,10 +19,10 @@ class Brew_GUI:
 
         # Opretter et Matplotlib-plot
         self.fig, self.ax = plt.subplots(figsize=(5, 3))
-        self.ax.set_xlabel(settings.X_AXIS_LABEL_TEXT, color='white')
-        self.ax.set_ylabel(settings.Y_AXIS_LABEL_TEXT , color='white')
-        self.ax.tick_params(axis='x', colors='white')
-        self.ax.tick_params(axis='y', colors='white')
+        self.ax.set_xlabel(settings.X_AXIS_LABEL_TEXT, color=settings.FOREGROUND_COLOR)
+        self.ax.set_ylabel(settings.Y_AXIS_LABEL_TEXT, color=settings.FOREGROUND_COLOR)
+        self.ax.tick_params(axis='x', colors=settings.FOREGROUND_COLOR)
+        self.ax.tick_params(axis='y', colors=settings.FOREGROUND_COLOR)
         self.ax.set_facecolor(settings.BACKGROUND_COLOR)  # Baggrundsfarve for mørkt tema
 
         self.fig.patch.set_facecolor(settings.BACKGROUND_COLOR)  # Baggrundsfarve for mørkt tema
@@ -44,9 +44,15 @@ class Brew_GUI:
         self.root.grid_columnconfigure(0, weight=1)
 
         # Label-felter over Matplotlib-plot
-        self.label_time = ttk.Label(self.root, text="43 min", font=("Helvetica", 24), background="#2E2E2E", foreground="white")
-        label2 = ttk.Label(self.root, text="Mæskning", font=("Helvetica", 18), background="#2E2E2E", foreground="white")
-        label3 = ttk.Label(self.root, text="Næste opgave: Tilsæt humle", font=("Helvetica", 12), background="#2E2E2E", foreground="white")
+        self.label_time = ttk.Label(self.root, text="xx min", font=("Helvetica", 24),
+                                    background=settings.BACKGROUND_COLOR,
+                                    foreground=settings.FOREGROUND_COLOR)
+        label2 = ttk.Label(self.root, text=self.BrewClass_instance.get_current_step_text(), font=("Helvetica", 18),
+                           background=settings.BACKGROUND_COLOR,
+                           foreground=settings.FOREGROUND_COLOR)
+        label3 = ttk.Label(self.root, text=self.BrewClass_instance.get_next_task_text(), font=("Helvetica", 12),
+                           background=settings.BACKGROUND_COLOR,
+                           foreground=settings.FOREGROUND_COLOR)
 
         # Placerer label-felter over Matplotlib-plot
         self.label_time.grid(row=0, column=0, pady=(10, 0))
@@ -64,7 +70,7 @@ class Brew_GUI:
         button_settings.grid(row=2, column=1, pady=(10, 0), sticky="w")
 
         # Opdaterer baggrundsfarven for resten af Tkinter-vinduet
-        self.root.tk_setPalette(background="#2E2E2E", foreground="white")
+        self.root.tk_setPalette(background=settings.BACKGROUND_COLOR, foreground=settings.FOREGROUND_COLOR)
 
         # Opdater data visninger
         self.update_data()
@@ -75,9 +81,9 @@ class Brew_GUI:
         # Opdater plotlinjerne med de nye data
         self.ax.clear()
         sp_x, sp_y = self.BrewClass_instance.get_set_point_data()
-        self.ax.plot(sp_x, sp_y, marker='', linestyle='-', color='lightblue', label='Sætpunkt')
+        self.ax.plot(sp_x, sp_y, marker='', linestyle='-', color='lightblue', label=settings.X_AXIS_LABEL_TEXT)
         temp_x, temp_y = self.BrewClass_instance.get_logger_data()
-        self.ax.plot(temp_x, temp_y, marker='o', linestyle='-', color='darksalmon', label='Temperatur')
+        self.ax.plot(temp_x, temp_y, marker='o', linestyle='-', color='darksalmon', label=settings.Y_AXIS_LABEL_TEXT)
         for task in self.BrewClass_instance.get_tast_times():
             self.ax.plot([task, task], [0,90], marker='', linestyle=':', color='darksalmon', label='Task')
 
@@ -107,8 +113,11 @@ class Brew_GUI:
 
     def button_settings_callback(self):
         settings_window = SettingsForm.SettingsForm(self.root, self.BrewClass_instance.steps)
-        #settings_window.wait_window(settings_window)
+        settings_window.wait_window(settings_window)
 
+        # Opdater data visninger
+        self.update_data()
+        
     def start_automatic_update(self):
         self.is_brewing=True
         self.update_data()

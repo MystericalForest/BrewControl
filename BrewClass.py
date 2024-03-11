@@ -11,13 +11,13 @@ class Brew_status(Enum):
     ERROR = 5
     
 class BrewClass:
-    def __init__(self, steps=None, name=None):
+    def __init__(self, steps, name=None):
         # Initializer for BrewStep class
         self.name = name
         self.steps = steps
         self.brewdate=None
         self.status=Brew_status.NOT_STARTED
-        self.brew_controller = BrewController.BrewController()
+        self.brew_controller = BrewController.BrewController(self.steps)
 
     def __str__(self):
         return self.name + ": " + self.get_status() + " - " + str(self.brew_controller.active_brew_step)
@@ -54,6 +54,12 @@ class BrewClass:
 
     def get_tast_times(self):
         return self.brew_controller.get_tast_times()
+
+    def get_current_step_text(self):
+        return "Mæskning"
+
+    def get_next_task_text(self):
+        return "Næste opgave: Tilsæt humle"
 
     def get_x_axis_min(self):
         return self.brew_controller.get_x_axis_min()

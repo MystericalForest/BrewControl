@@ -11,11 +11,12 @@ class Brew_status(Enum):
     ERROR = 5
 
 class BrewController:
-    def __init__(self):
+    def __init__(self, steps):
         # Initializer for BrewController class
         self.first = None           # Reference to the first node in the linked list
         self.last = None            # Reference to the last node in the linked list
         self.active_brew_step = None     # Reference to the currently active step
+        self.steps = steps
         self.status=Brew_status.NOT_STARTED
         self.datalogger=DataLogger_Sim.DataLogger_Sim()
         self.setpoints=[]
@@ -108,12 +109,13 @@ class BrewController:
     def get_set_point_data(self):
         x=[]
         y=[]
-        for idx, SP in enumerate(self.setpoints):
-            if (idx>0) and (idx<len(self.setpoints)-1):
-                x.append(SP.time_point)
-                y.append(y[-1])
-            x.append(SP.time_point)
-            y.append(SP.temperature)
+        time=0
+        for idx, step in enumerate(self.steps.steps):
+            x.append(time)
+            y.append(step.SP)
+            time=step.time
+            x.append(time)
+            y.append(step.SP)
         return x, y
 
     def get_logger_data(self):
@@ -137,7 +139,7 @@ class BrewController:
         for idx, SP in enumerate(self.setpoints):
             if SP.time_point>timestamp:
                 return self.setpoints[idx-1].temperature
-        return self.setpoints[-1].temperature
+        return self.setpoints[-1].temperature            
 
     def update_data(self):
         timestamp=self.get_current_timestamp()
