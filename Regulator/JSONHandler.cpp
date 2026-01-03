@@ -18,7 +18,7 @@ void JSONHandler::processCommand(const String& command) {
   }
   
   String cmd = request["command"];
-  if (cmd.isEmpty()) {
+  if (cmd.length() == 0) {
     response["error"] = "Missing command";
     response["errorCode"] = ERROR_COMMUNICATION;
     sendResponse(response);
@@ -68,7 +68,7 @@ void JSONHandler::handleSetConfig(const JsonDocument& request, JsonDocument& res
   }
   
   if (request.containsKey("pids")) {
-    JsonArray pids = request["pids"];
+    JsonArray pids = request["pids"].as<JsonArray>();
     for (int i = 0; i < NUM_PIDS && i < pids.size(); i++) {
       JsonObject pidObj = pids[i];
       PIDConfig config = pidController->getPIDConfig(i);
@@ -122,7 +122,7 @@ void JSONHandler::handleSetConfig(const JsonDocument& request, JsonDocument& res
   }
   
   if (request.containsKey("alarms")) {
-    JsonArray alarms = request["alarms"];
+    JsonArray alarms = request["alarms"].as<JsonArray>();
     for (int i = 0; i < NUM_PIDS && i < alarms.size(); i++) {
       JsonObject alarmObj = alarms[i];
       AlarmConfig config = alarmSystem->getAlarmConfig(i);
@@ -196,7 +196,7 @@ void JSONHandler::handleSetSimulation(const JsonDocument& request, JsonDocument&
   }
   
   if (request.containsKey("sensors")) {
-    JsonArray sensors = request["sensors"];
+    JsonArray sensors = request["sensors"].as<JsonArray>();
     for (int i = 0; i < TOTAL_SENSORS && i < sensors.size(); i++) {
       JsonObject sensorObj = sensors[i];
       if (sensorObj.containsKey("simulated")) {

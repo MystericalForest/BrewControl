@@ -41,6 +41,13 @@
 #define NUM_ONEWIRE_SENSORS 2
 #define TOTAL_SENSORS (NUM_PT100_SENSORS + NUM_ONEWIRE_SENSORS)
 
+// Sensor health enum
+enum SensorHealth {
+  SENSOR_OK,
+  SENSOR_FAILED,
+  SENSOR_TIMEOUT
+};
+
 // Error codes
 #define ERROR_NONE 0
 #define ERROR_SENSOR_TIMEOUT 1001

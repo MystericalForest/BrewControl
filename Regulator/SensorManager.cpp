@@ -16,9 +16,7 @@ void SensorManager::begin() {
   }
   
   // Discover OneWire devices
-  if (!dallasTemp.setResolution(12)) {
-    // Log setResolution failure but continue
-  }
+  dallasTemp.setResolution(12);
   int deviceCount = dallasTemp.getDeviceCount();
   for (int i = 0; i < NUM_ONEWIRE_SENSORS && i < deviceCount; i++) {
     if (!dallasTemp.getAddress(oneWireAddresses[i], i)) {
@@ -48,15 +46,7 @@ void SensorManager::update() {
     }
   }
   if (needOneWire) {
-    if (!dallasTemp.requestTemperatures()) {
-      // Mark OneWire sensors as failed if request fails
-      for (int i = NUM_PT100_SENSORS; i < TOTAL_SENSORS; i++) {
-        if (sensorConfigs[i].enabled && !sensorConfigs[i].simulated) {
-          readings[i].health = SENSOR_FAILED;
-          readings[i].errorCode = ERROR_SENSOR_DISCONNECTED;
-        }
-      }
-    }
+    dallasTemp.requestTemperatures();
   }
   
   for (int i = 0; i < TOTAL_SENSORS; i++) {
