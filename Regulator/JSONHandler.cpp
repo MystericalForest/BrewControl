@@ -68,10 +68,11 @@ void JSONHandler::handleSetConfig(const JsonDocument& request, JsonDocument& res
   }
   
   if (request.containsKey("pids")) {
-    JsonArray pids = request["pids"].as<JsonArray>();
-    for (int i = 0; i < NUM_PIDS && i < pids.size(); i++) {
-      JsonObject pidObj = pids[i];
-      PIDConfig config = pidController->getPIDConfig(i);
+    for (JsonPair pidPair : request["pids"].as<JsonObject>()) {
+      int i = pidPair.key().as<int>();
+      if (i >= 0 && i < NUM_PIDS) {
+        JsonObject pidObj = pidPair.value();
+        PIDConfig config = pidController->getPIDConfig(i);
       
       if (pidObj.containsKey("type")) {
         int typeValue = pidObj["type"].as<int>();
@@ -118,14 +119,16 @@ void JSONHandler::handleSetConfig(const JsonDocument& request, JsonDocument& res
       }
       
       pidController->setPIDConfig(i, config);
+      }
     }
   }
   
   if (request.containsKey("alarms")) {
-    JsonArray alarms = request["alarms"].as<JsonArray>();
-    for (int i = 0; i < NUM_PIDS && i < alarms.size(); i++) {
-      JsonObject alarmObj = alarms[i];
-      AlarmConfig config = alarmSystem->getAlarmConfig(i);
+    for (JsonPair alarmPair : request["alarms"].as<JsonObject>()) {
+      int i = alarmPair.key().as<int>();
+      if (i >= 0 && i < NUM_PIDS) {
+        JsonObject alarmObj = alarmPair.value();
+        AlarmConfig config = alarmSystem->getAlarmConfig(i);
       
       if (alarmObj.containsKey("warningLow")) {
         float value = alarmObj["warningLow"];
@@ -160,6 +163,7 @@ void JSONHandler::handleSetConfig(const JsonDocument& request, JsonDocument& res
       if (alarmObj.containsKey("enabled")) config.enabled = alarmObj["enabled"];
       
       alarmSystem->setAlarmConfig(i, config);
+      }
     }
   }
   
@@ -196,16 +200,18 @@ void JSONHandler::handleSetSimulation(const JsonDocument& request, JsonDocument&
   }
   
   if (request.containsKey("sensors")) {
-    JsonArray sensors = request["sensors"].as<JsonArray>();
-    for (int i = 0; i < TOTAL_SENSORS && i < sensors.size(); i++) {
-      JsonObject sensorObj = sensors[i];
-      if (sensorObj.containsKey("simulated")) {
-        sensorManager->enableSimulation(i, sensorObj["simulated"]);
-      }
-      if (sensorObj.containsKey("value")) {
-        float value = sensorObj["value"];
-        if (isfinite(value) && value >= -100 && value <= 200) {
-          sensorManager->setSimulatedValue(i, value);
+    for (JsonPair sensorPair : request["sensors"].as<JsonObject>()) {
+      int i = sensorPair.key().as<int>();
+      if (i >= 0 && i < TOTAL_SENSORS) {
+        JsonObject sensorObj = sensorPair.value();
+        if (sensorObj.containsKey("simulated")) {
+          sensorManager->enableSimulation(i, sensorObj["simulated"]);
+        }
+        if (sensorObj.containsKey("value")) {
+          float value = sensorObj["value"];
+          if (isfinite(value) && value >= -100 && value <= 200) {
+            sensorManager->setSimulatedValue(i, value);
+          }
         }
       }
     }

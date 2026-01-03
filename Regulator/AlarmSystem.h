@@ -10,12 +10,6 @@ enum AlarmLevel {
   ALARM_TECHNICAL = 3
 };
 
-enum SensorHealth {
-  SENSOR_OK = 0,
-  SENSOR_DEGRADED = 1,
-  SENSOR_FAILED = 2
-};
-
 enum ResetMode {
   AUTO_RESET = 0,
   MANUAL_ACK = 1
