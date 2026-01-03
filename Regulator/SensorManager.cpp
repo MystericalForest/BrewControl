@@ -111,7 +111,7 @@ void SensorManager::updateSensorHealth(int index) {
   
   unsigned long now = millis();
   if ((unsigned long)(now - readings[index].lastUpdate) > SENSOR_TIMEOUT) {
-    readings[index].health = SENSOR_FAILED;
+    readings[index].health = SENSOR_TIMED_OUT;
     readings[index].errorCode = ERROR_SENSOR_TIMEOUT;
   }
 }

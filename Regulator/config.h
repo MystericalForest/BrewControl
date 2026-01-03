@@ -45,7 +45,7 @@
 enum SensorHealth {
   SENSOR_OK,
   SENSOR_FAILED,
-  SENSOR_TIMEOUT
+  SENSOR_TIMED_OUT
 };
 
 // Error codes
