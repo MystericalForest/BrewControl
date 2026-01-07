@@ -61,7 +61,37 @@ void JSONHandler::handleGetStatus(JsonDocument& response) {
 }
 
 void JSONHandler::handleSetConfig(const JsonDocument& request, JsonDocument& response) {
+  if (!pidController || !alarmSystem) {
+    response["error"] = "System not initialized";
+    response["errorCode"] = ERROR_CONFIGURATION;
+    return;
+  }
+  
+  // Handle single PID config
+  if (request.containsKey("regulator_id")) {
+    int regulatorId = request["regulator_id"];
+    if (regulatorId >= 0 && regulatorId < NUM_PIDS) {
+      PIDConfig config = pidController->getPIDConfig(regulatorId);
+      
+      if (request.containsKey("type")) config.type = (ControllerType)request["type"].as<int>();
+      if (request.containsKey("setpoint")) config.setpoint = request["setpoint"];
+      if (request.containsKey("kp")) config.kp = request["kp"];
+      if (request.containsKey("ki")) config.ki = request["ki"];
+      if (request.containsKey("kd")) config.kd = request["kd"];
+      if (request.containsKey("sensorIndex")) config.sensorIndex = request["sensorIndex"];
+      if (request.containsKey("enabled")) config.enabled = request["enabled"];
+      if (request.containsKey("manualOutput")) config.manualOutput = request["manualOutput"];
+      
+      pidController->setPIDConfig(regulatorId, config);
+    }
+  }
+  
   response["status"] = "configured";
+  // Add full system status
+  addSensorData(response);
+  addPIDData(response);
+  addAlarmData(response);
+  addConfigData(response);
 }
 
 void JSONHandler::handleAckAlarm(const JsonDocument& request, JsonDocument& response) {
@@ -71,23 +101,53 @@ void JSONHandler::handleAckAlarm(const JsonDocument& request, JsonDocument& resp
     return;
   }
   
-  if (request.containsKey("pidIndex")) {
-    int pidIndex = request["pidIndex"];
-    if (pidIndex >= 0 && pidIndex < NUM_PIDS) {
-      alarmSystem->acknowledgeAlarm(pidIndex);
+  if (request.containsKey("regulator_id")) {
+    int regulatorId = request["regulator_id"];
+    if (regulatorId >= 0 && regulatorId < NUM_PIDS) {
+      alarmSystem->acknowledgeAlarm(regulatorId);
       response["status"] = "acknowledged";
     } else {
-      response["error"] = "Invalid pidIndex";
+      response["error"] = "Invalid regulator_id";
       response["errorCode"] = ERROR_COMMUNICATION;
     }
   } else {
-    response["error"] = "Missing pidIndex";
+    response["error"] = "Missing regulator_id";
     response["errorCode"] = ERROR_COMMUNICATION;
   }
+  
+  // Add full system status
+  addSensorData(response);
+  addPIDData(response);
+  addAlarmData(response);
+  addConfigData(response);
 }
 
 void JSONHandler::handleSetSimulation(const JsonDocument& request, JsonDocument& response) {
+  if (!sensorManager) {
+    response["error"] = "System not initialized";
+    response["errorCode"] = ERROR_CONFIGURATION;
+    return;
+  }
+  
+  // Handle single sensor simulation
+  if (request.containsKey("sensorIndex")) {
+    int sensorIndex = request["sensorIndex"];
+    if (sensorIndex >= 0 && sensorIndex < TOTAL_SENSORS) {
+      if (request.containsKey("simulated")) {
+        sensorManager->enableSimulation(sensorIndex, request["simulated"]);
+      }
+      if (request.containsKey("value")) {
+        sensorManager->setSimulatedValue(sensorIndex, request["value"]);
+      }
+    }
+  }
+  
   response["status"] = "simulation_set";
+  // Add full system status
+  addSensorData(response);
+  addPIDData(response);
+  addAlarmData(response);
+  addConfigData(response);
 }
 
 void JSONHandler::addSensorData(JsonDocument& doc) {
@@ -98,7 +158,7 @@ void JSONHandler::addSensorData(JsonDocument& doc) {
     JsonObject sensor = sensors.createNestedObject();
     const SensorReading& reading = sensorManager->getSensorReading(i);
     
-    sensor["index"] = i;
+    sensor["sensor_id"] = i;
     sensor["temperature"] = reading.temperature;
     sensor["health"] = reading.health;
     sensor["errorCode"] = reading.errorCode;
@@ -110,19 +170,19 @@ void JSONHandler::addSensorData(JsonDocument& doc) {
 void JSONHandler::addPIDData(JsonDocument& doc) {
   if (!pidController || !buttonManager) return;
   
-  JsonArray pids = doc.createNestedArray("pids");
+  JsonArray thermostats = doc.createNestedArray("thermostats");
   for (int i = 0; i < NUM_PIDS; i++) {
-    JsonObject pid = pids.createNestedObject();
+    JsonObject thermostat = thermostats.createNestedObject();
     const PIDStatus& status = pidController->getPIDStatus(i);
     
-    pid["index"] = i;
-    pid["input"] = status.input;
-    pid["output"] = status.output;
-    pid["setpoint"] = status.setpoint;
-    pid["enabled"] = status.enabled;
-    pid["type"] = status.type;
-    pid["outputActive"] = status.outputActive;
-    pid["buttonEnabled"] = buttonManager->isPIDEnabled(i);
+    thermostat["regulator_id"] = i;
+    thermostat["currentTemp"] = status.input;
+    thermostat["output"] = status.output;
+    thermostat["setpoint"] = status.setpoint;
+    thermostat["enabled"] = status.enabled;
+    thermostat["type"] = status.type;
+    thermostat["outputActive"] = status.outputActive;
+    thermostat["sensorIndex"] = status.sensorIndex;
   }
 }
 
@@ -134,7 +194,7 @@ void JSONHandler::addAlarmData(JsonDocument& doc) {
     JsonObject alarm = alarms.createNestedObject();
     AlarmState state = alarmSystem->getAlarmState(i);
     
-    alarm["pidIndex"] = i;
+    alarm["regulator_id"] = i;
     alarm["level"] = state.level;
     alarm["errorCode"] = state.errorCode;
     alarm["acknowledged"] = state.acknowledged;
@@ -189,25 +249,31 @@ void JSONHandler::handleToggleEnable(const JsonDocument& request, JsonDocument& 
     return;
   }
   
-  if (request.containsKey("pidIndex")) {
-    int pidIndex = request["pidIndex"];
-    if (pidIndex >= 0 && pidIndex < NUM_PIDS) {
+  if (request.containsKey("regulator_id")) {
+    int regulatorId = request["regulator_id"];
+    if (regulatorId >= 0 && regulatorId < NUM_PIDS) {
       if (request.containsKey("enabled")) {
         bool enabled = request["enabled"];
-        buttonManager->setPIDEnabled(pidIndex, enabled);
+        buttonManager->setPIDEnabled(regulatorId, enabled);
       } else {
-        bool currentState = buttonManager->isPIDEnabled(pidIndex);
-        buttonManager->setPIDEnabled(pidIndex, !currentState);
+        bool currentState = buttonManager->isPIDEnabled(regulatorId);
+        buttonManager->setPIDEnabled(regulatorId, !currentState);
       }
       response["status"] = "toggled";
-      response["pidIndex"] = pidIndex;
-      response["enabled"] = buttonManager->isPIDEnabled(pidIndex);
+      response["regulator_id"] = regulatorId;
+      response["enabled"] = buttonManager->isPIDEnabled(regulatorId);
     } else {
-      response["error"] = "Invalid pidIndex";
+      response["error"] = "Invalid regulator_id";
       response["errorCode"] = ERROR_COMMUNICATION;
     }
   } else {
-    response["error"] = "Missing pidIndex";
+    response["error"] = "Missing regulator_id";
     response["errorCode"] = ERROR_COMMUNICATION;
   }
+  
+  // Add full system status
+  addSensorData(response);
+  addPIDData(response);
+  addAlarmData(response);
+  addConfigData(response);
 }

@@ -27,6 +27,7 @@
 #define PT100_CS_1 10
 #define PT100_CS_2 9
 #define PT100_CS_3 8
+#define PT100_CS_4 6
 #define ONEWIRE_PIN 7
 
 // System constants
@@ -37,8 +38,8 @@
 #define INVALID_SENSOR_VALUE -999.0
 
 #define NUM_PIDS 3
-#define NUM_PT100_SENSORS 3
-#define NUM_ONEWIRE_SENSORS 2
+#define NUM_PT100_SENSORS 4
+#define NUM_ONEWIRE_SENSORS 3
 #define TOTAL_SENSORS (NUM_PT100_SENSORS + NUM_ONEWIRE_SENSORS)
 
 // Sensor health enum

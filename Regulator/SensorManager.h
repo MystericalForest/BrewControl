@@ -29,7 +29,7 @@ private:
   SensorReading readings[TOTAL_SENSORS];
   SensorConfig sensorConfigs[TOTAL_SENSORS];
   DeviceAddress oneWireAddresses[NUM_ONEWIRE_SENSORS];
-  int pt100CsPins[NUM_PT100_SENSORS] = {PT100_CS_1, PT100_CS_2, PT100_CS_3};
+  int pt100CsPins[NUM_PT100_SENSORS] = {PT100_CS_1, PT100_CS_2, PT100_CS_3, PT100_CS_4};
   
   float readPT100(int index);
   float readOneWire(int index);

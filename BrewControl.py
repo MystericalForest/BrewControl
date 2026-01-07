@@ -50,10 +50,10 @@ class SerialThread(QThread):
         if self.serial_conn:
             self.serial_conn.close()
 
-class PIDWidget(QWidget):
-    def __init__(self, pid_index, parent=None):
+class ThermostatWidget(QWidget):
+    def __init__(self, regulator_id, parent=None):
         super().__init__(parent)
-        self.pid_index = pid_index
+        self.regulator_id = regulator_id
         self.parent_app = parent
         self.init_ui()
     
@@ -61,7 +61,7 @@ class PIDWidget(QWidget):
         layout = QVBoxLayout()
         
         # Status display
-        self.status_label = QLabel(f"PID {self.pid_index + 1}: Deaktiveret")
+        self.status_label = QLabel(f"Termostat {self.regulator_id + 1}: Deaktiveret")
         self.status_label.setFont(QFont('Arial', 12, QFont.Bold))
         layout.addWidget(self.status_label)
         
@@ -84,7 +84,7 @@ class PIDWidget(QWidget):
         # Sensor selector
         controls.addWidget(QLabel("Sensor:"), 2, 0)
         self.sensor_combo = QComboBox()
-        self.sensor_combo.addItems([f"Sensor {i+1}" for i in range(5)])
+        self.sensor_combo.addItems([f"Sensor {i+1}" for i in range(7)])
         controls.addWidget(self.sensor_combo, 2, 1)
         
         # PID parameters
@@ -117,40 +117,48 @@ class PIDWidget(QWidget):
     def toggle_enable(self):
         if self.parent_app:
             enabled = self.enable_btn.text() == "Aktiver"
-            self.parent_app.toggle_pid(self.pid_index, enabled)
+            self.parent_app.toggle_thermostat(self.regulator_id, enabled)
     
-    def update_display(self, pid_data, sensor_data):
-        enabled = pid_data.get('enabled', False)
-        setpoint = pid_data.get('setpoint', 0)
-        output = pid_data.get('output', 0)
-        sensor_idx = pid_data.get('sensorIndex', 0)
+    def update_display(self, thermostat_data, sensor_data):
+        enabled = thermostat_data.get('enabled', False)
+        setpoint = thermostat_data.get('setpoint', 0)
+        output = thermostat_data.get('output', 0)
+        current_temp = thermostat_data.get('currentTemp', 0)
+        sensor_idx = thermostat_data.get('sensorIndex', 0)
+        thermostat_type = thermostat_data.get('type', 0)
         
-        if sensor_idx < len(sensor_data):
-            temp = sensor_data[sensor_idx].get('value', 0)
-            health = sensor_data[sensor_idx].get('health', 0)
-            
-            status = "Aktiv" if enabled else "Deaktiveret"
-            health_str = ["OK", "Nedsat", "Fejl"][health]
-            
-            self.status_label.setText(
-                f"PID {self.pid_index + 1}: {status} | "
-                f"Temp: {temp:.1f}°C | Sæt: {setpoint:.1f}°C | "
-                f"Output: {output}% | Sensor: {health_str}"
-            )
-            
-            # Color coding
-            if not enabled:
-                self.status_label.setStyleSheet("background-color: gray; color: white; padding: 5px;")
-            elif health > 0:
-                self.status_label.setStyleSheet("background-color: orange; color: white; padding: 5px;")
-            elif abs(temp - setpoint) > 2:
-                self.status_label.setStyleSheet("background-color: red; color: white; padding: 5px;")
-            else:
-                self.status_label.setStyleSheet("background-color: green; color: white; padding: 5px;")
+        # Find sensor data by sensor_id
+        sensor_temp = current_temp
+        sensor_health = 0
+        for sensor in sensor_data:
+            if sensor.get('sensor_id') == sensor_idx:
+                sensor_temp = sensor.get('temperature', current_temp)
+                sensor_health = sensor.get('health', 0)
+                break
+        
+        status = "Aktiv" if enabled else "Deaktiveret"
+        health_str = ["OK", "Fejl", "Timeout"][sensor_health]
+        type_str = ["PID", "Simple", "Manuel"][thermostat_type]
+        
+        self.status_label.setText(
+            f"Termostat {self.regulator_id + 1}: {status} ({type_str}) | "
+            f"Temp: {sensor_temp:.1f}°C | Sæt: {setpoint:.1f}°C | "
+            f"Output: {output:.0f}% | Sensor: {health_str}"
+        )
+        # Color coding
+        if not enabled:
+            self.status_label.setStyleSheet("background-color: gray; color: white; padding: 5px;")
+        elif sensor_health > 0:
+            self.status_label.setStyleSheet("background-color: orange; color: white; padding: 5px;")
+        elif abs(sensor_temp - setpoint) > 2:
+            self.status_label.setStyleSheet("background-color: red; color: white; padding: 5px;")
+        else:
+            self.status_label.setStyleSheet("background-color: green; color: white; padding: 5px;")
         
         # Update controls
         self.setpoint_spin.setValue(setpoint)
         self.sensor_combo.setCurrentIndex(sensor_idx)
+        self.type_combo.setCurrentIndex(thermostat_type)
         self.enable_btn.setText("Deaktiver" if enabled else "Aktiver")
 
 class AlarmWidget(QWidget):
@@ -257,32 +265,52 @@ class BrewControlApp(QMainWindow):
         
         layout = QVBoxLayout()
         
-        # Connection status
+        # Connection status and controls
+        conn_layout = QHBoxLayout()
         self.conn_label = QLabel("Forbindelse: Ikke tilsluttet")
         self.conn_label.setFont(QFont('Arial', 10, QFont.Bold))
-        layout.addWidget(self.conn_label)
+        conn_layout.addWidget(self.conn_label)
+        
+        # Serial port controls
+        conn_layout.addWidget(QLabel("Port:"))
+        self.port_combo = QComboBox()
+        self.port_combo.addItems(["COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8"])
+        self.port_combo.setCurrentText("COM3")
+        conn_layout.addWidget(self.port_combo)
+        
+        conn_layout.addWidget(QLabel("Baudrate:"))
+        self.baudrate_combo = QComboBox()
+        self.baudrate_combo.addItems(["9600", "19200", "38400", "57600", "115200"])
+        self.baudrate_combo.setCurrentText("115200")
+        conn_layout.addWidget(self.baudrate_combo)
+        
+        self.connect_btn = QPushButton("Tilslut")
+        self.connect_btn.clicked.connect(self.toggle_connection)
+        conn_layout.addWidget(self.connect_btn)
+        
+        layout.addLayout(conn_layout)
         
         # Tabs
         tabs = QTabWidget()
         
-        # PID Controllers tab
-        pid_tab = QWidget()
-        pid_layout = QHBoxLayout()
+        # Thermostat Controllers tab
+        thermostat_tab = QWidget()
+        thermostat_layout = QHBoxLayout()
         
-        self.pid_widgets = []
+        self.thermostat_widgets = []
         for i in range(3):
-            group = QGroupBox(f"Regulator {i+1}")
+            group = QGroupBox(f"Termostat {i+1}")
             group_layout = QVBoxLayout()
             
-            pid_widget = PIDWidget(i, self)
-            self.pid_widgets.append(pid_widget)
-            group_layout.addWidget(pid_widget)
+            thermostat_widget = ThermostatWidget(i, self)
+            self.thermostat_widgets.append(thermostat_widget)
+            group_layout.addWidget(thermostat_widget)
             group.setLayout(group_layout)
             
-            pid_layout.addWidget(group)
+            thermostat_layout.addWidget(group)
         
-        pid_tab.setLayout(pid_layout)
-        tabs.addTab(pid_tab, "Regulatorer")
+        thermostat_tab.setLayout(thermostat_layout)
+        tabs.addTab(thermostat_tab, "Termostater")
         
         # Alarms tab
         alarm_tab = QWidget()
@@ -308,7 +336,7 @@ class BrewControlApp(QMainWindow):
         sensor_layout = QVBoxLayout()
         
         self.sensor_labels = []
-        for i in range(5):
+        for i in range(7):
             label = QLabel(f"Sensor {i+1}: --")
             label.setFont(QFont('Arial', 12))
             self.sensor_labels.append(label)
@@ -316,6 +344,52 @@ class BrewControlApp(QMainWindow):
         
         sensor_tab.setLayout(sensor_layout)
         tabs.addTab(sensor_tab, "Sensorer")
+        
+        # Manual command tab
+        manual_tab = QWidget()
+        manual_layout = QVBoxLayout()
+        
+        # Command input
+        manual_layout.addWidget(QLabel("JSON Kommando:"))
+        self.manual_command_text = QTextEdit()
+        self.manual_command_text.setMaximumHeight(100)
+        self.manual_command_text.setPlainText('{"command": "getStatus"}')
+        manual_layout.addWidget(self.manual_command_text)
+        
+        # Send button
+        send_btn = QPushButton("Send Kommando")
+        send_btn.clicked.connect(self.send_manual_command)
+        manual_layout.addWidget(send_btn)
+        
+        # Response
+        manual_layout.addWidget(QLabel("Svar:"))
+        self.manual_response_text = QTextEdit()
+        self.manual_response_text.setReadOnly(True)
+        manual_layout.addWidget(self.manual_response_text)
+        
+        manual_tab.setLayout(manual_layout)
+        tabs.addTab(manual_tab, "Manuel Kommando")
+        
+        # Communication tab
+        comm_tab = QWidget()
+        comm_layout = QVBoxLayout()
+        
+        # Last command sent
+        comm_layout.addWidget(QLabel("Seneste kommando:"))
+        self.last_command_text = QTextEdit()
+        self.last_command_text.setReadOnly(True)
+        self.last_command_text.setMaximumHeight(100)
+        comm_layout.addWidget(self.last_command_text)
+        
+        # Last response received
+        comm_layout.addWidget(QLabel("Seneste svar:"))
+        self.last_response_text = QTextEdit()
+        self.last_response_text.setReadOnly(True)
+        self.last_response_text.setMaximumHeight(100)
+        comm_layout.addWidget(self.last_response_text)
+        
+        comm_tab.setLayout(comm_layout)
+        tabs.addTab(comm_tab, "Kommunikation")
         
         # Log tab
         log_tab = QWidget()
@@ -346,90 +420,152 @@ class BrewControlApp(QMainWindow):
         central_widget.setLayout(layout)
     
     def init_serial(self):
-        self.serial_thread = SerialThread()
-        self.serial_thread.data_received.connect(self.handle_serial_data)
-        self.serial_thread.start()
-        
-        # Initial status request
-        QTimer.singleShot(1000, self.request_status)
+        # Don't auto-start serial connection
+        pass
+    
+    def toggle_connection(self):
+        if self.serial_thread and self.serial_thread.isRunning():
+            # Disconnect
+            self.serial_thread.stop()
+            self.serial_thread.wait()
+            self.serial_thread = None
+            self.connect_btn.setText("Tilslut")
+            self.conn_label.setText("Forbindelse: Ikke tilsluttet")
+            self.conn_label.setStyleSheet("background-color: red; color: white; padding: 5px;")
+        else:
+            # Connect
+            port = self.port_combo.currentText()
+            baudrate = int(self.baudrate_combo.currentText())
+            self.serial_thread = SerialThread(port, baudrate)
+            self.serial_thread.data_received.connect(self.handle_serial_data)
+            self.serial_thread.start()
+            self.connect_btn.setText("Afbryd")
+            
+            # Start status updates when connected
+            QTimer.singleShot(1000, self.request_status)
     
     def handle_serial_data(self, data):
         self.current_data = data
         self.conn_label.setText("Forbindelse: Tilsluttet")
         self.conn_label.setStyleSheet("background-color: green; color: white; padding: 5px;")
         
+        # Update communication tab with response
+        self.last_response_text.setPlainText(json.dumps(data, indent=2, ensure_ascii=False))
+        
+        # Update manual command response
+        timestamp = time.strftime("%H:%M:%S")
+        self.manual_response_text.append(f"[{timestamp}] MODTAGET: {json.dumps(data, indent=2, ensure_ascii=False)}")
+        
         # Update displays
-        if 'pids' in data and 'sensors' in data:
-            for i, pid_widget in enumerate(self.pid_widgets):
-                if i < len(data['pids']):
-                    pid_widget.update_display(data['pids'][i], data['sensors'])
+        if 'thermostats' in data and 'sensors' in data:
+            for i, thermostat_widget in enumerate(self.thermostat_widgets):
+                if i < len(data['thermostats']):
+                    thermostat_widget.update_display(data['thermostats'][i], data['sensors'])
         
         if 'alarms' in data:
             for i, alarm_widget in enumerate(self.alarm_widgets):
-                if i < len(data['alarms']):
-                    alarm_widget.update_display(data['alarms'][i])
+                # Find alarm for this thermostat
+                for alarm in data['alarms']:
+                    if alarm.get('regulator_id') == i:
+                        alarm_widget.update_display(alarm)
+                        break
         
         if 'sensors' in data:
             for i, sensor_label in enumerate(self.sensor_labels):
-                if i < len(data['sensors']):
-                    sensor = data['sensors'][i]
-                    value = sensor.get('value', 0)
-                    health = sensor.get('health', 0)
-                    simulated = sensor.get('simulated', False)
-                    
-                    health_str = ["OK", "Nedsat", "Fejl"][health]
-                    sim_str = " (Simuleret)" if simulated else ""
-                    
-                    sensor_label.setText(f"Sensor {i+1}: {value:.1f}°C - {health_str}{sim_str}")
-                    
-                    if health == 0:
-                        sensor_label.setStyleSheet("background-color: lightgreen; padding: 5px;")
-                    elif health == 1:
-                        sensor_label.setStyleSheet("background-color: orange; padding: 5px;")
-                    else:
-                        sensor_label.setStyleSheet("background-color: red; color: white; padding: 5px;")
+                # Find sensor by sensor_id
+                for sensor in data['sensors']:
+                    if sensor.get('sensor_id') == i:
+                        temp = sensor.get('temperature', 0)
+                        health = sensor.get('health', 0)
+                        simulated = sensor.get('simulated', False)
+                        sensor_type = sensor.get('type', 'Unknown')
+                        
+                        health_str = ["OK", "Fejl", "Timeout"][health]
+                        sim_str = " (Simuleret)" if simulated else ""
+                        
+                        sensor_label.setText(f"Sensor {i+1} ({sensor_type}): {temp:.1f}°C - {health_str}{sim_str}")
+                        
+                        if health == 0:
+                            sensor_label.setStyleSheet("background-color: lightgreen; padding: 5px;")
+                        elif health == 1:
+                            sensor_label.setStyleSheet("background-color: orange; padding: 5px;")
+                        else:
+                            sensor_label.setStyleSheet("background-color: red; color: white; padding: 5px;")
+                        break
         
         # Log data
         timestamp = time.strftime("%H:%M:%S")
         self.log_text.append(f"[{timestamp}] Status modtaget")
     
-    def request_status(self):
-        if self.serial_thread:
-            command = {"command": "getStatus"}
+    def send_command_with_log(self, command):
+        if self.serial_thread and self.serial_thread.isRunning():
+            # Update communication tab with command
+            self.last_command_text.setPlainText(json.dumps(command, indent=2, ensure_ascii=False))
             self.serial_thread.send_command(command)
     
-    def toggle_pid(self, pid_index, enabled):
-        if self.serial_thread:
-            command = {
-                "command": "toggleEnable",
-                "pidIndex": pid_index,
-                "enabled": enabled
-            }
-            self.serial_thread.send_command(command)
+    def send_manual_command(self):
+        try:
+            # Parse JSON from text field
+            command_text = self.manual_command_text.toPlainText().strip()
+            command = json.loads(command_text)
             
-            timestamp = time.strftime("%H:%M:%S")
-            status = "aktiveret" if enabled else "deaktiveret"
-            self.log_text.append(f"[{timestamp}] PID {pid_index + 1} {status}")
+            # Send command
+            if self.serial_thread and self.serial_thread.isRunning():
+                self.serial_thread.send_command(command)
+                
+                # Show sent command in response area
+                timestamp = time.strftime("%H:%M:%S")
+                self.manual_response_text.append(f"[{timestamp}] SENDT: {json.dumps(command, indent=2, ensure_ascii=False)}")
+                
+                # Log in main log
+                self.log_text.append(f"[{timestamp}] Manuel kommando sendt")
+            else:
+                QMessageBox.warning(self, "Fejl", "Ikke forbundet til enhed")
+                
+        except json.JSONDecodeError as e:
+            QMessageBox.warning(self, "JSON Fejl", f"Ugyldig JSON: {str(e)}")
+        except Exception as e:
+            QMessageBox.warning(self, "Fejl", f"Kunne ikke sende kommando: {str(e)}")
+        if self.serial_thread and self.serial_thread.isRunning():
+            # Update communication tab with command
+            self.last_command_text.setPlainText(json.dumps(command, indent=2, ensure_ascii=False))
+            self.serial_thread.send_command(command)
+    
+    def request_status(self):
+        command = {"command": "getStatus"}
+        self.send_command_with_log(command)
+    
+    def toggle_thermostat(self, regulator_id, enabled):
+        command = {
+            "command": "toggleEnable",
+            "regulator_id": regulator_id,
+            "enabled": enabled
+        }
+        self.send_command_with_log(command)
+        
+        timestamp = time.strftime("%H:%M:%S")
+        status = "aktiveret" if enabled else "deaktiveret"
+        self.log_text.append(f"[{timestamp}] Termostat {regulator_id + 1} {status}")
     
     def acknowledge_alarm(self, alarm_index):
-        if self.serial_thread:
-            command = {
-                "command": "ackAlarm",
-                "pidIndex": alarm_index
-            }
-            self.serial_thread.send_command(command)
-            
-            timestamp = time.strftime("%H:%M:%S")
-            self.log_text.append(f"[{timestamp}] Alarm {alarm_index + 1} kvitteret")
+        command = {
+            "command": "ackAlarm",
+            "regulator_id": alarm_index
+        }
+        self.send_command_with_log(command)
+        
+        timestamp = time.strftime("%H:%M:%S")
+        self.log_text.append(f"[{timestamp}] Alarm {alarm_index + 1} kvitteret")
     
     def apply_config(self):
         if not self.serial_thread:
             return
         
-        # Collect PID configuration
-        pids = []
-        for i, widget in enumerate(self.pid_widgets):
-            pid_config = {
+        # Collect thermostat configuration
+        thermostats = []
+        for i, widget in enumerate(self.thermostat_widgets):
+            thermostat_config = {
+                "regulator_id": i,
                 "type": widget.type_combo.currentIndex(),
                 "setpoint": widget.setpoint_spin.value(),
                 "kp": widget.kp_spin.value(),
@@ -438,28 +574,14 @@ class BrewControlApp(QMainWindow):
                 "sensorIndex": widget.sensor_combo.currentIndex(),
                 "enabled": widget.enable_btn.text() == "Deaktiver"
             }
-            pids.append(pid_config)
-        
-        # Collect alarm configuration
-        alarms = []
-        for i, widget in enumerate(self.alarm_widgets):
-            alarm_config = {
-                "warningLow": widget.warn_low_spin.value(),
-                "warningHigh": widget.warn_high_spin.value(),
-                "alarmLow": widget.alarm_low_spin.value(),
-                "alarmHigh": widget.alarm_high_spin.value(),
-                "resetMode": 0 if widget.auto_reset_cb.isChecked() else 1,
-                "enabled": True
+            
+            command = {
+                "command": "setConfig",
+                **thermostat_config
             }
-            alarms.append(alarm_config)
+            
+            self.send_command_with_log(command)
         
-        command = {
-            "command": "setConfig",
-            "pids": pids,
-            "alarms": alarms
-        }
-        
-        self.serial_thread.send_command(command)
         
         timestamp = time.strftime("%H:%M:%S")
         self.log_text.append(f"[{timestamp}] Konfiguration sendt til Arduino")
@@ -467,20 +589,19 @@ class BrewControlApp(QMainWindow):
         QMessageBox.information(self, "Konfiguration", "Konfiguration sendt til Arduino")
     
     def emergency_stop(self):
-        if self.serial_thread:
-            # Disable all PIDs
-            for i in range(3):
-                command = {
-                    "command": "toggleEnable",
-                    "pidIndex": i,
-                    "enabled": False
-                }
-                self.serial_thread.send_command(command)
-            
-            timestamp = time.strftime("%H:%M:%S")
-            self.log_text.append(f"[{timestamp}] NØDSTOP aktiveret - alle regulatorer deaktiveret")
-            
-            QMessageBox.warning(self, "NØDSTOP", "Alle regulatorer er blevet deaktiveret!")
+        # Disable all thermostats
+        for i in range(3):
+            command = {
+                "command": "toggleEnable",
+                "regulator_id": i,
+                "enabled": False
+            }
+            self.send_command_with_log(command)
+        
+        timestamp = time.strftime("%H:%M:%S")
+        self.log_text.append(f"[{timestamp}] NØDSTOP aktiveret - alle termostater deaktiveret")
+        
+        QMessageBox.warning(self, "NØDSTOP", "Alle termostater er blevet deaktiveret!")
     
     def closeEvent(self, event):
         if self.serial_thread:
