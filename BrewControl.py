@@ -106,13 +106,55 @@ class ThermostatWidget(QWidget):
         self.kd_spin.setDecimals(2)
         controls.addWidget(self.kd_spin, 5, 1)
         
+        # Hysteresis for Simple mode
+        controls.addWidget(QLabel("Hysterese:"), 6, 0)
+        self.hysteresis_spin = QDoubleSpinBox()
+        self.hysteresis_spin.setRange(0.1, 10.0)
+        self.hysteresis_spin.setDecimals(1)
+        self.hysteresis_spin.setSuffix("°C")
+        self.hysteresis_spin.setValue(1.0)
+        controls.addWidget(self.hysteresis_spin, 6, 1)
+        
+        # Manual output for Manual mode
+        controls.addWidget(QLabel("Manuel output:"), 7, 0)
+        self.manual_output_spin = QSpinBox()
+        self.manual_output_spin.setRange(0, 100)
+        self.manual_output_spin.setSuffix("%")
+        controls.addWidget(self.manual_output_spin, 7, 1)
+        
         # Enable/Disable button
         self.enable_btn = QPushButton("Aktiver")
         self.enable_btn.clicked.connect(self.toggle_enable)
-        controls.addWidget(self.enable_btn, 6, 0, 1, 2)
+        controls.addWidget(self.enable_btn, 8, 0, 1, 2)
         
         layout.addLayout(controls)
         self.setLayout(layout)
+        
+        # Connect type change to update UI
+        self.type_combo.currentIndexChanged.connect(self.update_controls_visibility)
+        self.update_controls_visibility()
+    
+    def update_controls_visibility(self):
+        """Show/hide controls based on thermostat type"""
+        thermostat_type = self.type_combo.currentIndex()
+        
+        # PID controls (only for PID type)
+        pid_visible = thermostat_type == 0
+        self.kp_spin.setVisible(pid_visible)
+        self.ki_spin.setVisible(pid_visible)
+        self.kd_spin.setVisible(pid_visible)
+        
+        # Hysteresis (only for Simple type)
+        hysteresis_visible = thermostat_type == 1
+        self.hysteresis_spin.setVisible(hysteresis_visible)
+        
+        # Manual output (only for Manual type)
+        manual_visible = thermostat_type == 2
+        self.manual_output_spin.setVisible(manual_visible)
+        
+        # Setpoint (not for Manual type)
+        setpoint_visible = thermostat_type != 2
+        self.setpoint_spin.setVisible(setpoint_visible)
     
     def toggle_enable(self):
         if self.parent_app:
@@ -159,7 +201,19 @@ class ThermostatWidget(QWidget):
         self.setpoint_spin.setValue(setpoint)
         self.sensor_combo.setCurrentIndex(sensor_idx)
         self.type_combo.setCurrentIndex(thermostat_type)
+        
+        # Update type-specific controls
+        if thermostat_type == 0:  # PID
+            self.kp_spin.setValue(thermostat_data.get('kp', 2.0))
+            self.ki_spin.setValue(thermostat_data.get('ki', 1.0))
+            self.kd_spin.setValue(thermostat_data.get('kd', 0.5))
+        elif thermostat_type == 1:  # Simple
+            self.hysteresis_spin.setValue(thermostat_data.get('hysteresis', 1.0))
+        elif thermostat_type == 2:  # Manual
+            self.manual_output_spin.setValue(thermostat_data.get('manualOutput', 0))
+        
         self.enable_btn.setText("Deaktiver" if enabled else "Aktiver")
+        self.update_controls_visibility()
 
 class AlarmWidget(QWidget):
     def __init__(self, alarm_index, parent=None):
@@ -562,25 +616,35 @@ class BrewControlApp(QMainWindow):
             return
         
         # Collect thermostat configuration
-        thermostats = []
         for i, widget in enumerate(self.thermostat_widgets):
             thermostat_config = {
+                "command": "setConfig",
                 "regulator_id": i,
                 "type": widget.type_combo.currentIndex(),
-                "setpoint": widget.setpoint_spin.value(),
-                "kp": widget.kp_spin.value(),
-                "ki": widget.ki_spin.value(),
-                "kd": widget.kd_spin.value(),
                 "sensorIndex": widget.sensor_combo.currentIndex(),
                 "enabled": widget.enable_btn.text() == "Deaktiver"
             }
             
-            command = {
-                "command": "setConfig",
-                **thermostat_config
-            }
+            # Add type-specific parameters
+            thermostat_type = widget.type_combo.currentIndex()
+            if thermostat_type == 0:  # PID
+                thermostat_config.update({
+                    "setpoint": widget.setpoint_spin.value(),
+                    "kp": widget.kp_spin.value(),
+                    "ki": widget.ki_spin.value(),
+                    "kd": widget.kd_spin.value()
+                })
+            elif thermostat_type == 1:  # Simple
+                thermostat_config.update({
+                    "setpoint": widget.setpoint_spin.value(),
+                    "hysteresis": widget.hysteresis_spin.value()
+                })
+            elif thermostat_type == 2:  # Manual
+                thermostat_config.update({
+                    "manualOutput": widget.manual_output_spin.value()
+                })
             
-            self.send_command_with_log(command)
+            self.send_command_with_log(thermostat_config)
         
         
         timestamp = time.strftime("%H:%M:%S")
