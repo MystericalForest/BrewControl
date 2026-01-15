@@ -3,7 +3,7 @@
 
 #include "config.h"
 #include <PID_v1.h>
-#include <PID_AutoTune_v0.h>
+#include <PID-AutoTune.h>
 
 enum ControllerType {
   CONTROLLER_PID = 0,
@@ -47,7 +47,7 @@ struct PIDStatus {
 class PIDController {
 private:
   PID* pid[NUM_PIDS];
-  PID_ATune* autotuner[NUM_PIDS];
+  PIDAutoTune* autotuner[NUM_PIDS];
   PIDConfig config[NUM_PIDS];
   PIDStatus status[NUM_PIDS];
   double pidInput[NUM_PIDS];

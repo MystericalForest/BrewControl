@@ -62,13 +62,13 @@ void PIDController::update(int pidIndex, double sensorValue, bool outputEnabled)
   
   if (state[pidIndex] == STATE_TUNE && autotuner[pidIndex]) {
     pidInput[pidIndex] = sensorValue;
-    int tuneResult = autotuner[pidIndex]->Runtime();
+    int tuneResult = autotuner[pidIndex]->runtime();
     output = pidOutput[pidIndex];
     
     if (tuneResult != 0) {
-      config[pidIndex].kp = autotuner[pidIndex]->GetKp();
-      config[pidIndex].ki = autotuner[pidIndex]->GetKi();
-      config[pidIndex].kd = autotuner[pidIndex]->GetKd();
+      config[pidIndex].kp = autotuner[pidIndex]->getKp();
+      config[pidIndex].ki = autotuner[pidIndex]->getKi();
+      config[pidIndex].kd = autotuner[pidIndex]->getKd();
       if (pid[pidIndex]) {
         pid[pidIndex]->SetTunings(config[pidIndex].kp, config[pidIndex].ki, config[pidIndex].kd);
       }
@@ -185,11 +185,11 @@ void PIDController::startAutotune(int pidIndex, double outputStep, double noiseb
     delete autotuner[pidIndex];
   }
   
-  autotuner[pidIndex] = new PID_ATune(&pidInput[pidIndex], &pidOutput[pidIndex]);
-  autotuner[pidIndex]->SetNoiseBand(noiseband);
-  autotuner[pidIndex]->SetOutputStep(outputStep);
-  autotuner[pidIndex]->SetLookbackSec(lookback);
-  autotuner[pidIndex]->SetControlType(1);
+  autotuner[pidIndex] = new PIDAutoTune(&pidInput[pidIndex], &pidOutput[pidIndex]);
+  autotuner[pidIndex]->setNoiseBand(noiseband);
+  autotuner[pidIndex]->setOutputStep(outputStep);
+  autotuner[pidIndex]->setLookbackSec(lookback);
+  autotuner[pidIndex]->setControlType(PIDAutoTune::AMIGO_PID);
   
   state[pidIndex] = STATE_TUNE;
   status[pidIndex].state = STATE_TUNE;
@@ -198,7 +198,7 @@ void PIDController::startAutotune(int pidIndex, double outputStep, double noiseb
 void PIDController::cancelAutotune(int pidIndex) {
   if (pidIndex < 0 || pidIndex >= NUM_PIDS) return;
   if (autotuner[pidIndex]) {
-    autotuner[pidIndex]->Cancel();
+    autotuner[pidIndex]->cancel();
     delete autotuner[pidIndex];
     autotuner[pidIndex] = nullptr;
   }
