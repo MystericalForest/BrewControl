@@ -185,11 +185,11 @@ void PIDController::startAutotune(int pidIndex, double outputStep, double noiseb
     delete autotuner[pidIndex];
   }
   
-  autotuner[pidIndex] = new PIDAutoTune(&pidInput[pidIndex], &pidOutput[pidIndex]);
+  autotuner[pidIndex] = new PID_ATune(&pidInput[pidIndex], &pidOutput[pidIndex]);
   autotuner[pidIndex]->setNoiseBand(noiseband);
   autotuner[pidIndex]->setOutputStep(outputStep);
   autotuner[pidIndex]->setLookbackSec(lookback);
-  autotuner[pidIndex]->setControlType(PIDAutoTune::AMIGO_PID);
+  autotuner[pidIndex]->setControlType(PID_ATune::AMIGO_PID);
   
   state[pidIndex] = STATE_TUNE;
   status[pidIndex].state = STATE_TUNE;
