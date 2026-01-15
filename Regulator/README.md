@@ -17,7 +17,6 @@ Industri-inspireret temperaturcontroller med 3 PID-regulatorer, 5 temperatursens
 Installer følgende biblioteker via Arduino IDE Library Manager:
 - ArduinoJson (v6.x)
 - PID (v1.2.x)
-- PID-AutoTune by ahmedosama07 (v1.0.0)
 - OneWire
 - DallasTemperature
 

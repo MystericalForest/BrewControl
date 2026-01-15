@@ -7,8 +7,8 @@ PIDController::PIDController() {
     pidOutput[i] = 0;
     pidSetpoint[i] = 20.0;
     pid[i] = new PID(&pidInput[i], &pidOutput[i], &pidSetpoint[i], 2.0, 5.0, 1.0, DIRECT);
-    autotuner[i] = nullptr;
     state[i] = STATE_IDLE;
+    tuneCycles[i] = 0;
   }
 }
 
@@ -16,10 +16,6 @@ PIDController::~PIDController() {
   for (int i = 0; i < NUM_PIDS; i++) {
     delete pid[i];
     pid[i] = nullptr;
-    if (autotuner[i]) {
-      delete autotuner[i];
-      autotuner[i] = nullptr;
-    }
   }
 }
 
@@ -60,22 +56,9 @@ void PIDController::update(int pidIndex, double sensorValue, bool outputEnabled)
   
   double output = 0;
   
-  if (state[pidIndex] == STATE_TUNE && autotuner[pidIndex]) {
-    pidInput[pidIndex] = sensorValue;
-    int tuneResult = autotuner[pidIndex]->runtime();
-    output = pidOutput[pidIndex];
-    
-    if (tuneResult != 0) {
-      config[pidIndex].kp = autotuner[pidIndex]->getKp();
-      config[pidIndex].ki = autotuner[pidIndex]->getKi();
-      config[pidIndex].kd = autotuner[pidIndex]->getKd();
-      if (pid[pidIndex]) {
-        pid[pidIndex]->SetTunings(config[pidIndex].kp, config[pidIndex].ki, config[pidIndex].kd);
-      }
-      delete autotuner[pidIndex];
-      autotuner[pidIndex] = nullptr;
-      state[pidIndex] = STATE_RUN;
-    }
+  if (state[pidIndex] == STATE_TUNE) {
+    updateAutotune(pidIndex, sensorValue);
+    output = tuneOutput[pidIndex];
   } else if (state[pidIndex] == STATE_RUN) {
     switch (config[pidIndex].type) {
       case CONTROLLER_PID:
@@ -161,10 +144,6 @@ void PIDController::updateStateMachine(int pidIndex) {
   
   if (!config[pidIndex].enabled && state[pidIndex] != STATE_IDLE) {
     state[pidIndex] = STATE_IDLE;
-    if (autotuner[pidIndex]) {
-      delete autotuner[pidIndex];
-      autotuner[pidIndex] = nullptr;
-    }
   }
 }
 
@@ -181,15 +160,13 @@ ControllerState PIDController::getState(int pidIndex) const {
 
 void PIDController::startAutotune(int pidIndex, double outputStep, double noiseband, int lookback) {
   if (pidIndex < 0 || pidIndex >= NUM_PIDS) return;
-  if (autotuner[pidIndex]) {
-    delete autotuner[pidIndex];
-  }
   
-  autotuner[pidIndex] = new PID_ATune(&pidInput[pidIndex], &pidOutput[pidIndex]);
-  autotuner[pidIndex]->setNoiseBand(noiseband);
-  autotuner[pidIndex]->setOutputStep(outputStep);
-  autotuner[pidIndex]->setLookbackSec(lookback);
-  autotuner[pidIndex]->setControlType(PID_ATune::AMIGO_PID);
+  tuneOutputStep[pidIndex] = outputStep;
+  tuneOutput[pidIndex] = outputStep;
+  tuneStartTime[pidIndex] = millis();
+  tunePeakHigh[pidIndex] = config[pidIndex].setpoint;
+  tunePeakLow[pidIndex] = config[pidIndex].setpoint;
+  tuneCycles[pidIndex] = 0;
   
   state[pidIndex] = STATE_TUNE;
   status[pidIndex].state = STATE_TUNE;
@@ -197,11 +174,33 @@ void PIDController::startAutotune(int pidIndex, double outputStep, double noiseb
 
 void PIDController::cancelAutotune(int pidIndex) {
   if (pidIndex < 0 || pidIndex >= NUM_PIDS) return;
-  if (autotuner[pidIndex]) {
-    autotuner[pidIndex]->cancel();
-    delete autotuner[pidIndex];
-    autotuner[pidIndex] = nullptr;
-  }
   state[pidIndex] = STATE_IDLE;
   status[pidIndex].state = STATE_IDLE;
+}
+
+void PIDController::updateAutotune(int pidIndex, double sensorValue) {
+  if (sensorValue > config[pidIndex].setpoint) {
+    tuneOutput[pidIndex] = 0;
+    if (sensorValue > tunePeakHigh[pidIndex]) tunePeakHigh[pidIndex] = sensorValue;
+  } else {
+    tuneOutput[pidIndex] = tuneOutputStep[pidIndex];
+    if (sensorValue < tunePeakLow[pidIndex]) tunePeakLow[pidIndex] = sensorValue;
+  }
+  
+  if (millis() - tuneStartTime[pidIndex] > 1800000) {
+    double amplitude = (tunePeakHigh[pidIndex] - tunePeakLow[pidIndex]) / 2.0;
+    double Ku = 4.0 * tuneOutputStep[pidIndex] / (3.14159 * amplitude);
+    double Pu = 1800.0;
+    
+    config[pidIndex].kp = 0.6 * Ku;
+    config[pidIndex].ki = 1.2 * Ku / Pu;
+    config[pidIndex].kd = 0.075 * Ku * Pu;
+    
+    if (pid[pidIndex]) {
+      pid[pidIndex]->SetTunings(config[pidIndex].kp, config[pidIndex].ki, config[pidIndex].kd);
+    }
+    
+    state[pidIndex] = STATE_RUN;
+    status[pidIndex].state = STATE_RUN;
+  }
 }

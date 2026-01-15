@@ -3,9 +3,6 @@
 
 #include "config.h"
 #include <PID_v1.h>
-#include <pid-autotune.h>
-
-class PID_ATune;
 
 enum ControllerType {
   CONTROLLER_PID = 0,
@@ -49,7 +46,6 @@ struct PIDStatus {
 class PIDController {
 private:
   PID* pid[NUM_PIDS];
-  PID_ATune* autotuner[NUM_PIDS];
   PIDConfig config[NUM_PIDS];
   PIDStatus status[NUM_PIDS];
   double pidInput[NUM_PIDS];
@@ -59,7 +55,15 @@ private:
   bool simpleControllerState[NUM_PIDS] = {false, false, false};
   ControllerState state[NUM_PIDS] = {STATE_IDLE, STATE_IDLE, STATE_IDLE};
   
+  double tuneOutput[NUM_PIDS];
+  unsigned long tuneStartTime[NUM_PIDS];
+  double tunePeakHigh[NUM_PIDS];
+  double tunePeakLow[NUM_PIDS];
+  int tuneCycles[NUM_PIDS];
+  double tuneOutputStep[NUM_PIDS];
+  
   void updateStateMachine(int pidIndex);
+  void updateAutotune(int pidIndex, double sensorValue);
 
 public:
   PIDController();
