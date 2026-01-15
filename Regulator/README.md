@@ -17,6 +17,7 @@ Industri-inspireret temperaturcontroller med 3 PID-regulatorer, 5 temperatursens
 Installer følgende biblioteker via Arduino IDE Library Manager:
 - ArduinoJson (v6.x)
 - PID (v1.2.x)
+- PID_AutoTune_v0
 - OneWire
 - DallasTemperature
 
@@ -30,6 +31,8 @@ Se `regulator/config.h` for komplet pin-mapping.
 - **PID**: Fuld PID-regulering med konfigurerbare parametre
 - **Simple**: On/off regulering med hysterese
 - **Manual**: Manuel procentuel styring
+- **Autotune**: Automatisk PID parameter tuning
+- **Tilstandsmaskine**: IDLE, RUN, TUNE, DEMO, FAIL
 - Hver regulator kan konfigureres til at bruge en hvilken som helst af de 5 sensorer
 
 ### 5 Temperatursensorer
@@ -53,6 +56,8 @@ Alle kommandoer via Serial (115200 baud):
 {"command": "ackAlarm", "pidIndex": 0}
 {"command": "setSimulation", "sensors": [...]}
 {"command": "toggleEnable", "pidIndex": 0, "enabled": true}
+{"command": "autotune", "regulator_id": 0}
+{"command": "setState", "regulator_id": 0, "state": 1}
 ```
 
 ## Fejlkoder

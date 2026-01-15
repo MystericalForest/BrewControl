@@ -74,6 +74,13 @@
 {"command": "toggleEnable", "pidIndex": 0, "enabled": true}
 {"command": "toggleEnable", "pidIndex": 1} // Toggle current state
 
+## Start autotune
+{"command": "autotune", "regulator_id": 0, "outputStep": 50.0, "noiseband": 0.5, "lookback": 30}
+
+## Set controller state
+{"command": "setState", "regulator_id": 0, "state": 1}
+// States: 0=IDLE, 1=RUN, 2=TUNE, 3=DEMO, 4=FAIL
+
 # Alarm konfiguration pr. regulator:
 # Regulator 0: Strenge grænser (20-30°C warning, 15-35°C alarm)
 # Regulator 1: Løsere grænser (25-35°C warning, 20-40°C alarm) med manuel kvittering

@@ -59,7 +59,28 @@
 - [ ] Test setpoint ændring
 - [ ] Test parameter tuning
 
-### 3.2 Simple Controller Test
+### 3.2 Autotune Test
+```json
+{"command": "autotune", "regulator_id": 0, "outputStep": 50.0, "noiseband": 0.5, "lookback": 30}
+```
+- [ ] Start autotune (state skifter til TUNE)
+- [ ] Verificer oscillerende output
+- [ ] Vent på completion (state skifter til RUN)
+- [ ] Verificer nye Kp, Ki, Kd værdier
+- [ ] Test cancel autotune
+
+### 3.3 State Machine Test
+```json
+{"command": "setState", "regulator_id": 0, "state": 1}
+```
+- [ ] Test IDLE state (output=0)
+- [ ] Test RUN state (normal drift)
+- [ ] Test TUNE state (autotune)
+- [ ] Test DEMO state (50% output)
+- [ ] Test FAIL state
+- [ ] Verificer state transitions
+
+### 3.4 Simple Controller Test
 ```json
 {
   "command": "setConfig", 
@@ -74,7 +95,7 @@
 - [ ] Test on/off funktionalitet
 - [ ] Verificer hysterese
 
-### 3.3 Manual Mode Test
+### 3.5 Manual Mode Test
 ```json
 {
   "command": "setConfig",
@@ -184,7 +205,13 @@
 - [ ] Forskellige alarmgrænser pr. regulator
 - [ ] Uafhængige enable/disable states
 
-### 7.2 Stress Test
+### 7.2 Autotune Integration Test
+- [ ] Start autotune på regulator 0
+- [ ] Verificer andre regulatorer fortsætter normal drift
+- [ ] Test autotune med simulerede sensorer
+- [ ] Verificer PID parametre opdateres korrekt
+
+### 7.3 Stress Test
 - [ ] Kontinuerlig drift i 24 timer
 - [ ] Hyppige JSON kommandoer (1/sek)
 - [ ] Simuler sensor ustabilitet

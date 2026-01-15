@@ -20,6 +20,8 @@ private:
   void handleAckAlarm(const JsonDocument& request, JsonDocument& response);
   void handleSetSimulation(const JsonDocument& request, JsonDocument& response);
   void handleToggleEnable(const JsonDocument& request, JsonDocument& response);
+  void handleAutotune(const JsonDocument& request, JsonDocument& response);
+  void handleSetState(const JsonDocument& request, JsonDocument& response);
   
   void addSensorData(JsonDocument& doc);
   void addPIDData(JsonDocument& doc);

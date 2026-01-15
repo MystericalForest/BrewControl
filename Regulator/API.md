@@ -59,6 +59,7 @@ Henter komplet status for alle 3 termostater, 7 sensorer og alarmer.
       "enabled": true,
       "outputActive": true,
       "sensorIndex": 0,
+      "state": 1,
       "kp": 2.0,
       "ki": 1.0,
       "kd": 0.5,
@@ -203,6 +204,44 @@ Aktiverer eller deaktiverer en termostat.
 
 **Response:** Komplet systemstatus med `"status": "toggled"`
 
+### autotune - Start PID autotune
+Starter automatisk tuning af PID parametre. Controlleren skifter til TUNE tilstand og finder optimale Kp, Ki, Kd værdier.
+
+**Request:**
+```json
+{
+  "command": "autotune",
+  "regulator_id": 0,
+  "outputStep": 50.0,
+  "noiseband": 0.5,
+  "lookback": 30
+}
+```
+
+**Parametre:**
+- `outputStep`: Output ændring under tuning (default: 50.0)
+- `noiseband`: Støjbånd for detektion (default: 0.5)
+- `lookback`: Sekunder at kigge tilbage (default: 30)
+
+**Response:** Komplet systemstatus med `"status": "autotune_started"`
+
+### setState - Skift controller tilstand
+Skifter en controllers tilstand manuelt.
+
+**Request:**
+```json
+{"command": "setState", "regulator_id": 0, "state": 1}
+```
+
+**Tilstande:**
+- **0: IDLE** - Inaktiv, ingen output
+- **1: RUN** - Normal drift
+- **2: TUNE** - Autotune mode
+- **3: DEMO** - Demo mode (50% output)
+- **4: FAIL** - Fejltilstand
+
+**Response:** Komplet systemstatus med `"status": "state_changed"`
+
 ## Fejlresponses
 Ved fejl returneres komplet systemstatus med fejlbesked:
 
@@ -271,6 +310,11 @@ Ved fejl returneres komplet systemstatus med fejlbesked:
 ```json
 {"command": "toggleEnable", "regulator_id": 0, "enabled": true}
 {"command": "setConfig", "regulator_id": 0, "setpoint": 65.0}
+```
+
+### Start autotune på termostat 1
+```json
+{"command": "autotune", "regulator_id": 0, "outputStep": 50.0, "noiseband": 0.5, "lookback": 30}
 ```
 
 ### Sæt termostat 2 til manuel mode med 75% effekt

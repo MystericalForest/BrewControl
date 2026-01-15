@@ -37,6 +37,10 @@ void JSONHandler::processCommand(const String& command) {
     handleSetSimulation(request, response);
   } else if (cmd == "toggleEnable") {
     handleToggleEnable(request, response);
+  } else if (cmd == "autotune") {
+    handleAutotune(request, response);
+  } else if (cmd == "setState") {
+    handleSetState(request, response);
   } else {
     response["error"] = "Unknown command";
     response["errorCode"] = ERROR_COMMUNICATION;
@@ -183,6 +187,7 @@ void JSONHandler::addPIDData(JsonDocument& doc) {
     thermostat["type"] = status.type;
     thermostat["outputActive"] = status.outputActive;
     thermostat["sensorIndex"] = status.sensorIndex;
+    thermostat["state"] = status.state;
   }
 }
 
@@ -272,6 +277,80 @@ void JSONHandler::handleToggleEnable(const JsonDocument& request, JsonDocument& 
   }
   
   // Add full system status
+  addSensorData(response);
+  addPIDData(response);
+  addAlarmData(response);
+  addConfigData(response);
+}
+
+void JSONHandler::handleAutotune(const JsonDocument& request, JsonDocument& response) {
+  if (!pidController) {
+    response["error"] = "System not initialized";
+    response["errorCode"] = ERROR_CONFIGURATION;
+    return;
+  }
+  
+  if (!request.containsKey("regulator_id")) {
+    response["error"] = "Missing regulator_id";
+    response["errorCode"] = ERROR_COMMUNICATION;
+    return;
+  }
+  
+  int regulatorId = request["regulator_id"];
+  if (regulatorId < 0 || regulatorId >= NUM_PIDS) {
+    response["error"] = "Invalid regulator_id";
+    response["errorCode"] = ERROR_COMMUNICATION;
+    return;
+  }
+  
+  double outputStep = request.containsKey("outputStep") ? request["outputStep"].as<double>() : 50.0;
+  double noiseband = request.containsKey("noiseband") ? request["noiseband"].as<double>() : 0.5;
+  int lookback = request.containsKey("lookback") ? request["lookback"].as<int>() : 30;
+  
+  pidController->startAutotune(regulatorId, outputStep, noiseband, lookback);
+  
+  response["status"] = "autotune_started";
+  response["regulator_id"] = regulatorId;
+  
+  addSensorData(response);
+  addPIDData(response);
+  addAlarmData(response);
+  addConfigData(response);
+}
+
+void JSONHandler::handleSetState(const JsonDocument& request, JsonDocument& response) {
+  if (!pidController) {
+    response["error"] = "System not initialized";
+    response["errorCode"] = ERROR_CONFIGURATION;
+    return;
+  }
+  
+  if (!request.containsKey("regulator_id") || !request.containsKey("state")) {
+    response["error"] = "Missing regulator_id or state";
+    response["errorCode"] = ERROR_COMMUNICATION;
+    return;
+  }
+  
+  int regulatorId = request["regulator_id"];
+  if (regulatorId < 0 || regulatorId >= NUM_PIDS) {
+    response["error"] = "Invalid regulator_id";
+    response["errorCode"] = ERROR_COMMUNICATION;
+    return;
+  }
+  
+  int stateValue = request["state"];
+  if (stateValue < STATE_IDLE || stateValue > STATE_FAIL) {
+    response["error"] = "Invalid state";
+    response["errorCode"] = ERROR_COMMUNICATION;
+    return;
+  }
+  
+  pidController->setState(regulatorId, (ControllerState)stateValue);
+  
+  response["status"] = "state_changed";
+  response["regulator_id"] = regulatorId;
+  response["state"] = stateValue;
+  
   addSensorData(response);
   addPIDData(response);
   addAlarmData(response);
